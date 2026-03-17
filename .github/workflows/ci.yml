@@ -1,0 +1,22 @@
+name: Kravix CI Pipeline
+
+on:
+  push:
+    branches: [ "feature-login" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print message
+        run: echo "CI Pipeline Running"
+
+      - name: List files
+        run: ls -la
+
+      - name: Show login file
+        run: cat login.txt
