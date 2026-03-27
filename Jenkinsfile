@@ -3,12 +3,12 @@ pipeline {
     stages {
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t myjenkinsapp .'
+                sh '/usr/local/bin/docker build -t myjenkinsapp .'
             }
         }
         stage('Run Container') {
             steps {
-                sh 'docker run -d -p 8095:80 --name jenkinscontainer myjenkinsapp || true'
+                sh '/usr/local/bin/docker run -d -p 8095:80 --name jenkinscontainer myjenkinsapp || true'
             }
         }
     }
