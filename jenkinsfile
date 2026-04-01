@@ -1,0 +1,24 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Stop Old') {
+            steps {
+                sh 'docker compose down || true'
+            }
+        }
+
+        stage('Run App') {
+            steps {
+                sh 'docker compose up -d --build'
+            }
+        }
+
+        stage('Check') {
+            steps {
+                sh 'docker ps'
+            }
+        }
+    }
+}
