@@ -1,19 +1,25 @@
 pipeline {
     agent any
     stages {
-        stage('Build') {
+        stage('Clone') {
             steps {
-                echo 'Building the project...'
+                git ' https://github.com/amitkravix-ops/kravix-internal-app'
             }
         }
-        stage('Test') {
+        stage('Build Docker Image') {
             steps {
-                echo 'Running tests...'
+                sh 'docker build -t myapp .'
             }
         }
-        stage('Deploy') {
+        stage('Stop Old Container') {
             steps {
-                echo 'Deploying application...'
+                sh 'docker stop mycontainer || true'
+                sh 'docker rm mycontainer || true'
+            }
+        }
+        stage('Run New Container') {
+            steps {
+                sh 'docker run -d -p 3000:3000 --name mycontainer myapp'
             }
         }
     }
