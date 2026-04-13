@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git ' https://github.com/amitkravix-ops/kravix-internal-app'
+                git branch: 'feature-login', url: 'https://github.com/amitkravix-ops/kravix-internal-app'
             }
         }
         stage('Build Docker Image') {
