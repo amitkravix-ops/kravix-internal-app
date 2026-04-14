@@ -1,25 +1,40 @@
 pipeline {
     agent any
+
+    environment {
+        IMAGE_NAME = "amitkumarbehera/myapp"
+    }
+
     stages {
+
         stage('Clone') {
             steps {
-                git branch: 'feature-login', url: 'https://github.com/amitkravix-ops/kravix-internal-app'
+                git 'https://github.com/amitkravix-ops/kravix-internal-app.git'
             }
         }
-        stage('Build Docker Image') {
+
+        stage('Build Image') {
             steps {
-                sh 'docker build -t myapp .'
+                sh 'docker build -t $IMAGE_NAME:latest .'
             }
         }
-        stage('Stop Old Container') {
+
+        stage('Push to DockerHub') {
             steps {
-                sh 'docker stop mycontainer || true'
-                sh 'docker rm mycontainer || true'
+                sh 'docker push $IMAGE_NAME:latest'
             }
         }
-        stage('Run New Container') {
+
+        stage('Deploy to EC2') {
             steps {
-                sh 'docker run -d -p 3000:3000 --name mycontainer myapp'
+                sh '''
+                ssh ec2-user@13.60.218.186 << EOF
+                docker pull $IMAGE_NAME:latest
+                docker stop myapp || true
+                docker rm myapp || true
+                docker run -d -p 80:3000 --name myapp $IMAGE_NAME:latest
+                EOF
+                '''
             }
         }
     }
