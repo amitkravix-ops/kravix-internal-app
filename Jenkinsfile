@@ -2,39 +2,64 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "amitkumarbehera/myapp"
+        DEV_IP = "100.55.51.240"
+        QA_IP = "18.206.236.68"
+        PROD_IP = "54.160.196.4"
     }
 
     stages {
 
-        stage('Clone') {
+        stage('Pull Code') {
             steps {
-                git 'https://github.com/amitkravix-ops/kravix-internal-app.git'
+                git 'https://github.com/amitkravix-ops/kravix-internal-app'
             }
         }
 
-        stage('Build Image') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME:latest .'
+                sh 'docker build -t myapp .'
             }
         }
 
-        stage('Push to DockerHub') {
+        stage('Deploy to Dev') {
             steps {
-                sh 'docker push $IMAGE_NAME:latest'
+                sshagent(['ec2-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ec2-user@$DEV_IP "
+                    docker stop myapp || true &&
+                    docker rm myapp || true &&
+                    docker run -d -p 3001:3000 --name myapp myapp
+                    "
+                    '''
+                }
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Deploy to QA') {
             steps {
-                sh '''
-                ssh ec2-user@13.60.218.186 << EOF
-                docker pull $IMAGE_NAME:latest
-                docker stop myapp || true
-                docker rm myapp || true
-                docker run -d -p 80:3000 --name myapp $IMAGE_NAME:latest
-                EOF
-                '''
+                sshagent(['ec2-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ec2-user@$QA_IP "
+                    docker stop myapp || true &&
+                    docker rm myapp || true &&
+                    docker run -d -p 3002:3000 --name myapp myapp
+                    "
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Prod') {
+            steps {
+                sshagent(['ec2-key']) {
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no ec2-user@$PROD_IP "
+                    docker stop myapp || true &&
+                    docker rm myapp || true &&
+                    docker run -d -p 80:3000 --name myapp myapp
+                    "
+                    '''
+                }
             }
         }
     }
