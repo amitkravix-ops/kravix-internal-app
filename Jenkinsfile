@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     environment {
+        IMAGE_NAME = "amitkumarbehera/amit-myapp"
         DEV_IP = "100.55.51.240"
         QA_IP = "18.206.236.68"
         PROD_IP = "54.160.196.4"
@@ -15,51 +16,60 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Image') {
             steps {
-                sh 'docker build -t myapp .'
+                sh 'docker build -t $IMAGE_NAME:$BUILD_NUMBER .'
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh 'docker push $IMAGE_NAME:$BUILD_NUMBER'
             }
         }
 
         stage('Deploy to Dev') {
             steps {
-                sshagent(['ec2-key']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ec2-user@$DEV_IP "
-                    docker stop myapp || true &&
-                    docker rm myapp || true &&
-                    docker run -d -p 3001:3000 --name myapp myapp
-                    "
-                    '''
-                }
+                sh '''
+                ssh ec2-user@$DEV_IP << EOF
+                docker pull $IMAGE_NAME:$BUILD_NUMBER
+                docker run -d -p 3001:3000 $IMAGE_NAME:$BUILD_NUMBER
+                EOF
+                '''
+            }
+        }
+
+        stage('Approval for QA') {
+            steps {
+                input message: "Deploy to QA?"
             }
         }
 
         stage('Deploy to QA') {
             steps {
-                sshagent(['ec2-key']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ec2-user@$QA_IP "
-                    docker stop myapp || true &&
-                    docker rm myapp || true &&
-                    docker run -d -p 3002:3000 --name myapp myapp
-                    "
-                    '''
-                }
+                sh '''
+                ssh ec2-user@$QA_IP << EOF
+                docker pull $IMAGE_NAME:$BUILD_NUMBER
+                docker run -d -p 3002:3000 $IMAGE_NAME:$BUILD_NUMBER
+                EOF
+                '''
+            }
+        }
+
+        stage('Approval for Prod') {
+            steps {
+                input message: "Deploy to Production?"
             }
         }
 
         stage('Deploy to Prod') {
             steps {
-                sshagent(['ec2-key']) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no ec2-user@$PROD_IP "
-                    docker stop myapp || true &&
-                    docker rm myapp || true &&
-                    docker run -d -p 80:3000 --name myapp myapp
-                    "
-                    '''
-                }
+                sh '''
+                ssh ec2-user@$PROD_IP << EOF
+                docker pull $IMAGE_NAME:$BUILD_NUMBER
+                docker run -d -p 80:3000 --restart always $IMAGE_NAME:$BUILD_NUMBER
+                EOF
+                '''
             }
         }
     }
